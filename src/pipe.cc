@@ -1,10 +1,5 @@
 #include "pipe.h"
 
-#include <assert.h>
-#include <fileapi.h>
-#include <windows.h>
-
-#include <memory>
 #include <string>
 
 #include "common.h"
@@ -47,7 +42,6 @@ bool PipeConnection::Write(Message &message) {
     WriteLastErrorMessage("PipeConnection::Write");
     return false;
   }
-  assert(bytes_written == sizeof(Message));
   return true;
 }
 
@@ -65,7 +59,6 @@ Message PipeConnection::Read() {
     WriteLastErrorMessage("PipeConnection::Read::GetOverlappedResult");
     is_succeed = false;
   }
-  assert(bytes_read == sizeof(Message));
   message.is_succeed = is_succeed;
   return message;
 }

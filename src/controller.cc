@@ -1,6 +1,5 @@
 #include "controller.h"
 
-#include <algorithm>
 #include <iostream>
 #include <memory>
 

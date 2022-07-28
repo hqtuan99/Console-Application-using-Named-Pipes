@@ -1,8 +1,6 @@
 #include <windows.h>
-#include <winuser.h>
 
 #include <iostream>
-#include <ostream>
 
 #include "common.h"
 #include "controller.h"
@@ -25,18 +23,19 @@ void run_controller_in_separate_process() {
 
 bool test_controller_pipe(IConnectionMethodFactory &factory) {
   std::cout << "Testing controller for existence..." << std::endl;
-  auto client = factory.NewClient();
+  std::unique_ptr<IClient> client = factory.NewClient();
   // Connection implemented taking into account RAII principle and factory
   // pattern
-  auto connection = client->Connect(*factory.ControllerAddress(), 500);
+  std::unique_ptr<IConnection> connection =
+      client->Connect(*factory.ControllerAddress(), 500);
   if (!connection) {
-    std::cout << "Failed\n";
+    std::cout << "Failed!" << std::endl;
     return false;
   }
   Message m;
   m.type = MessageType::TEST_CONTROLLER;
   if (!connection->Write(m)) {
-    std::cout << "Failed\n";
+    std::cout << "Failed!" << std::endl;
     return false;
   }
   return true;

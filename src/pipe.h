@@ -1,9 +1,6 @@
 #ifndef PIPE_H_
 #define PIPE_H_
 
-#include <windows.h>
-
-#include <memory>
 #include <string>
 
 #include "i_connection_method.h"

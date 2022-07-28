@@ -1,10 +1,6 @@
 #include "node.h"
 
-#include <corecrt.h>
-
 #include <iostream>
-#include <memory>
-#include <ostream>
 #include <unordered_set>
 #include <vector>
 
