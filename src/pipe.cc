@@ -1,5 +1,7 @@
 #include "pipe.h"
 
+#include <algorithm>
+#include <random>
 #include <string>
 
 #include "common.h"
@@ -21,7 +23,7 @@ PipeName::PipeName(const IAddress &address) : PipeName(address.raw()) {}
 
 std::string PipeName::NewName(std::string raw_name) {
   if (raw_name.empty()) {
-    return kPipePrefix + std::to_string(rand());
+    return kPipePrefix + std::to_string(RandomNumber());
   } else if (raw_name[0] == '\\' && raw_name.size() > 1) {
     return kPipePrefix + raw_name.substr(1, raw_name.size() - 1);
   } else {

@@ -9,8 +9,10 @@
 using Clock = std::chrono::system_clock;
 using TimePoint = std::chrono::time_point<Clock>;
 
-std::string serializeTimePoint(const TimePoint &time,
+std::string SerializeTimePoint(const TimePoint &time,
                                const std::string &format);
+
+int RandomNumber();
 
 inline void WriteLastErrorMessage(const char *proc_name = nullptr,
                                   const char *object = nullptr) {

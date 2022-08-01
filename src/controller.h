@@ -7,6 +7,7 @@
 #include <unordered_set>
 
 #include "common.h"
+#include "log.h"
 #include "pipe.h"
 
 class Controller {
@@ -21,7 +22,7 @@ public:
 
 private:
   static const Clock::duration max_server_response;
-  static constexpr ClientRole role = ClientRole::CONTROLLER;
+  static constexpr ClientRole role = ClientRole::kCONTROLLER;
   void ChooseNewServer();
   IConnectionMethodFactory &connection_factory_;
   std::unordered_set<std::string> connected_nodes_addresses_;

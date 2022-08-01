@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "i_connection_method.h"
+#include "log.h"
 
 class Node {
 public:
@@ -20,7 +21,7 @@ private:
   void RunAsClient();
   void RunAsServer();
   void SendTime();
-  ClientRole role_ = ClientRole::CLIENT;
+  ClientRole role_ = ClientRole::kCLIENT;
   IConnectionMethodFactory &factory_;
   // should be used only by server
   std::unordered_set<std::string> clients_;

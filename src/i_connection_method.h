@@ -10,9 +10,14 @@
 const int kMaxAddressLength = 256;
 const int kMaxNodes = 16;
 
-enum class ClientRole { CLIENT, SERVER, CONTROLLER };
+enum class ClientRole { kCLIENT, kSERVER, kCONTROLLER };
 
-enum class MessageType { NEW_CLIENT, NEW_TIME, SET_SERVER, TEST_CONTROLLER };
+enum class MessageType {
+  kNEW_CLIENT,
+  kNEW_TIME,
+  kSET_SERVER,
+  kTEST_CONTROLLER
+};
 
 struct Message {
   ClientRole client_role;

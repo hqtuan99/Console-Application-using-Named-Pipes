@@ -12,7 +12,7 @@ Controller::Controller(IConnectionMethodFactory &factory)
       connection_client_(factory.NewClient()) {}
 
 void Controller::Run() {
-  std::cout << "Controller is running..." << std::endl;
+  LOG(kINFO) << "Controller is running...";
   while (true) {
     std::unique_ptr<IConnection> connection =
         connection_server_->WaitForConnection(5000);
@@ -29,43 +29,40 @@ void Controller::Run() {
       continue;
       // error
     }
-    if (m.type == MessageType::TEST_CONTROLLER) {
+    if (m.type == MessageType::kTEST_CONTROLLER) {
       continue;
     }
     switch (m.client_role) {
-    case ClientRole::CLIENT: {
+    case ClientRole::kCLIENT: {
       switch (m.type) {
-      case MessageType::NEW_CLIENT: {
-        std::cout << "Got NEW_CLIENT from " << m.addresses[0] << std::endl;
+      case MessageType::kNEW_CLIENT: {
+        LOG(kINFO) << "Got NEW_CLIENT from " << m.addresses[0];
         if (connected_nodes_addresses_.size() + 1 > kMaxNodes)
-          std::cout << "Too many nodes. Rejected!" << std::endl;
+          LOG(kINFO) << "Too many nodes. Rejected!";
         connected_nodes_addresses_.emplace(m.addresses[0]);
       } break;
       default:
-        std::cerr << "Protocol error: got incorrect message type from client"
-                  << std::endl;
+        LOG(kDEBUG) << "Protocol error: got incorrect message type from client";
         continue;
       }
 
     } break;
-    case ClientRole::SERVER: {
+    case ClientRole::kSERVER: {
       switch (m.type) {
-      case MessageType::NEW_TIME: {
+      case MessageType::kNEW_TIME: {
         last_server_response_ = Clock::now();
-        std::cout << "Got new time: "
-                  << serializeTimePoint(last_server_response_,
-                                        "UTC: %Y-%m-%d %H:%M:%S")
-                  << std::endl;
+        LOG(kINFO) << "Got new time: "
+                   << SerializeTimePoint(last_server_response_,
+                                         "UTC: %Y-%m-%d %H:%M:%S");
         continue;
       } break;
       default:
-        std::cerr << "Protocol error: got incorrect message type from server"
-                  << std::endl;
+        LOG(kDEBUG) << "Protocol error: got incorrect message type from server";
         continue;
       }
     } break;
-    case ClientRole::CONTROLLER: {
-      std::cerr << "Error: got controller message in controller" << std::endl;
+    case ClientRole::kCONTROLLER: {
+      LOG(kDEBUG) << "Error: got controller message in controller";
       continue;
     } break;
     }
@@ -106,27 +103,25 @@ void Controller::Run() {
 }
 
 void Controller::ChooseNewServer() {
-  std::cout << "Server died or not set yet. Choosing new server..."
-            << std::endl;
+  LOG(kINFO) << "Server died or not set yet. Choosing new server...";
   while (!connected_nodes_addresses_.empty()) {
     auto supposed_new_server_it = connected_nodes_addresses_.begin();
     server_address_ = connection_factory_.NewAddress(*supposed_new_server_it);
-    std::cout << "Attempt to make " << server_address_->raw()
-              << " to be a server" << std::endl;
+    LOG(kINFO) << "Attempt to make " << server_address_->raw()
+               << " to be a server";
     Message m;
     m.client_role = role;
-    m.type = MessageType::SET_SERVER;
+    m.type = MessageType::kSET_SERVER;
 
     int i = 0;
     for (auto &client_address : connected_nodes_addresses_) {
-      std::cout << "Copying " << client_address << " to message" << std::endl;
+      LOG(kINFO) << "Copying " << client_address << " to message";
       client_address.copy(m.addresses[i++], kMaxAddressLength);
     }
     m.addresses_count = i;
 
     {
-      std::cout << "Attempt to connect to " << server_address_->raw()
-                << std::endl;
+      LOG(kINFO) << "Attempt to connect to " << server_address_->raw();
       std::unique_ptr<IConnection> new_server_connection =
           connection_client_->Connect(*server_address_, 100);
       if (!new_server_connection) {
@@ -137,8 +132,8 @@ void Controller::ChooseNewServer() {
         connected_nodes_addresses_.erase(supposed_new_server_it);
         continue;
       }
-      std::cout << "Successfully made " << server_address_->raw() << " a server"
-                << std::endl;
+      LOG(kINFO) << "Successfully made " << server_address_->raw()
+                 << " a server";
       return;
     }
   }

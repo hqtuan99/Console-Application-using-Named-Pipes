@@ -4,6 +4,7 @@
 #include <string>
 
 #include "i_connection_method.h"
+#include "log.h"
 
 class PipeName : public IAddress {
 public:

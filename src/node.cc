@@ -4,42 +4,40 @@
 #include <unordered_set>
 #include <vector>
 
-#include "controller.h"
-
 Node::Node(IConnectionMethodFactory &factory)
     : factory_(factory),
       connection_server_(factory.NewServer(*factory.GenerateAddress())),
       connection_client_(factory.NewClient()) {
-  std::cout << "Creating node..." << std::endl;
+  LOG(kINFO) << "Creating node...";
   std::unique_ptr<IConnection> connection =
       connection_client_->Connect(*factory.ControllerAddress(), 1000);
   if (!connection) {
-    std::cerr << "Could not connect to controller!" << std::endl;
+    LOG(kDEBUG) << "Could not connect to controller!";
     exit(1);
   }
   Message m;
   m.client_role = role_;
-  m.type = MessageType::NEW_CLIENT;
+  m.type = MessageType::kNEW_CLIENT;
   connection_server_->address_str().copy(m.addresses[0], kMaxAddressLength);
   if (!connection->Write(m)) {
-    std::cerr << "Could not write message to the controller!" << std::endl;
+    LOG(kDEBUG) << "Could not write message to the controller!";
     exit(1);
   }
 }
 
 void Node::Run() {
-  std::cout << "Running node..." << std::endl;
+  LOG(kINFO) << "Running node...";
   while (true) {
     switch (role_) {
-    case ClientRole::CLIENT:
+    case ClientRole::kCLIENT:
       RunAsClient();
       break;
-    case ClientRole::SERVER:
+    case ClientRole::kSERVER:
       RunAsServer();
       SendTime();
       break;
     default:
-      std::cerr << "Node has incorrect role!" << std::endl;
+      LOG(kDEBUG) << "Node has incorrect role!";
       return;
     }
   }
@@ -55,57 +53,56 @@ void Node::RunAsClient() {
   auto m = connection->Read();
   connection->Close();
   if (!m.is_succeed) {
-    std::cerr << "Client " << connection_server_->address_str()
-              << " read failed";
+    LOG(kDEBUG) << "Client " << connection_server_->address_str()
+                << " read failed";
     return;
   }
   switch (m.client_role) {
-  case ClientRole::CONTROLLER: {
-    if (m.type != MessageType::SET_SERVER) {
-      std::cerr << "Client " << connection_server_->address_str()
-                << " got incorrect message from controller!" << std::endl;
+  case ClientRole::kCONTROLLER: {
+    if (m.type != MessageType::kSET_SERVER) {
+      LOG(kDEBUG) << "Client " << connection_server_->address_str()
+                  << " got incorrect message from controller!";
       return;
     }
-    std::cout << "Becoming server..." << std::endl;
+    LOG(kINFO) << "Becoming server...";
     for (int i = 0; i < m.addresses_count; ++i) {
       clients_.emplace(m.addresses[i]);
     }
-    role_ = ClientRole::SERVER;
+    role_ = ClientRole::kSERVER;
     last_time_sending_ = Clock::now();
     return;
   } break;
 
-  case ClientRole::SERVER: {
-    if (m.type != MessageType::NEW_TIME) {
-      std::cerr << "Protocol error: client "
-                << connection_server_->address_str()
-                << " got incorrect message from server" << std::endl;
+  case ClientRole::kSERVER: {
+    if (m.type != MessageType::kNEW_TIME) {
+      LOG(kDEBUG) << "Protocol error: client "
+                  << connection_server_->address_str()
+                  << " got incorrect message from server";
       return;
     }
-    std::cout << "Got new time: "
-              << serializeTimePoint(m.time, "UTC: %Y-%m-%d %H:%M:%S")
-              << std::endl;
+    LOG(kINFO) << "Got new time: "
+               << SerializeTimePoint(m.time, "UTC: %Y-%m-%d %H:%M:%S");
   } break;
 
   default:
-    std::cerr << "Client " << connection_server_->address_str()
-              << " got message from incorrect node!" << std::endl;
+    LOG(kDEBUG) << "Client " << connection_server_->address_str()
+                << " got message from incorrect node!";
   }
 }
 
 void Node::SendTime() {
-  if (role_ != ClientRole::SERVER)
+  if (role_ != ClientRole::kSERVER)
     return;
 
   using namespace std::chrono_literals;
   auto chrono_now = Clock::now();
   if (chrono_now - last_time_sending_ > 1s) {
-    std::cout << "Sending time..." << std::endl;
+    LOG(kINFO) << "Sending time...";
     last_time_sending_ = chrono_now;
 
     Message m;
     m.client_role = role_;
-    m.type = MessageType::NEW_TIME;
+    m.type = MessageType::kNEW_TIME;
     m.time = Clock::now();
 
     std::vector<decltype(clients_)::iterator> clients_to_delete;
@@ -113,8 +110,7 @@ void Node::SendTime() {
       if (*it == connection_server_->address_str())
         continue;
       std::unique_ptr<IAddress> client_address = factory_.NewAddress(*it);
-      std::cout << "Attempt to connect to " << client_address->raw()
-                << std::endl;
+      LOG(kINFO) << "Attempt to connect to " << client_address->raw();
       std::unique_ptr<IConnection> client_connection =
           connection_client_->Connect(*client_address, 100);
       if (!client_connection) {
@@ -130,7 +126,7 @@ void Node::SendTime() {
     for (auto it : clients_to_delete)
       clients_.erase(it);
 
-    std::cout << "Attempt to connect to the controller" << std::endl;
+    LOG(kINFO) << "Attempt to connect to the controller";
     std::unique_ptr<IConnection> controller_connection =
         connection_client_->Connect(*factory_.ControllerAddress(), 100);
     if (!controller_connection) {
@@ -138,9 +134,9 @@ void Node::SendTime() {
           kMaxAttemptsToConnectToController) {
         exit(1);
       } else {
-        std::cerr << "Could not connect to the controller. Attempt "
+        std::cout << "Could not connect to the controller. Attempt "
                   << attempts_to_connect_controller << '\\'
-                  << kMaxAttemptsToConnectToController << std::endl;
+                  << kMaxAttemptsToConnectToController;
         return;
       }
     }
@@ -148,9 +144,9 @@ void Node::SendTime() {
       if (++attempts_to_connect_controller > 6) {
         exit(1);
       } else {
-        std::cerr << "Could not write to the controller. Attempt "
+        std::cout << "Could not write to the controller. Attempt "
                   << attempts_to_connect_controller << '\\'
-                  << kMaxAttemptsToConnectToController << std::endl;
+                  << kMaxAttemptsToConnectToController;
         return;
       }
     }
@@ -166,15 +162,15 @@ void Node::RunAsServer() {
   }
   Message m = connection->Read();
   if (!m.is_succeed) {
-    std::cerr << "Server " << connection_server_->address_str()
-              << " read failed!" << std::endl;
+    LOG(kDEBUG) << "Server " << connection_server_->address_str()
+                << " read failed!";
     return;
   }
   switch (m.client_role) {
-  case ClientRole::CONTROLLER: {
-    if (m.type != MessageType::NEW_CLIENT) {
-      std::cerr << "Server " << connection_server_->address_str()
-                << " got incorrect message from controller!" << std::endl;
+  case ClientRole::kCONTROLLER: {
+    if (m.type != MessageType::kNEW_CLIENT) {
+      LOG(kDEBUG) << "Server " << connection_server_->address_str()
+                  << " got incorrect message from controller!";
       return;
     }
     clients_.emplace(m.addresses[0]);
@@ -182,8 +178,9 @@ void Node::RunAsServer() {
   } break;
 
   default:
-    std::cerr << "Protocol error: server " << connection_server_->address_str()
-              << " got message from incorrect node!" << std::endl;
+    LOG(kDEBUG) << "Protocol error: server "
+                << connection_server_->address_str()
+                << " got message from incorrect node!";
     return;
   }
 }

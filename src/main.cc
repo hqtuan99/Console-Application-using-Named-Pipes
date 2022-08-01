@@ -1,14 +1,15 @@
-#include <windows.h>
 
 #include <iostream>
+#include <random>
 
 #include "common.h"
 #include "controller.h"
 #include "node.h"
 #include "pipe.h"
 
+namespace {
 void run_controller_in_separate_process() {
-  std::cout << "Starting controller in separate thread..." << std::endl;
+  LOG(kINFO) << "Starting controller in separate thread...";
   STARTUPINFO si{};
   si.cb = sizeof(si);
   PROCESS_INFORMATION pi{};
@@ -22,32 +23,37 @@ void run_controller_in_separate_process() {
 }
 
 bool test_controller_pipe(IConnectionMethodFactory &factory) {
-  std::cout << "Testing controller for existence..." << std::endl;
+  LOG(kINFO) << "Testing controller for existence...";
   std::unique_ptr<IClient> client = factory.NewClient();
   // Connection implemented taking into account RAII principle and factory
   // pattern
   std::unique_ptr<IConnection> connection =
       client->Connect(*factory.ControllerAddress(), 500);
   if (!connection) {
-    std::cout << "Failed!" << std::endl;
+    LOG(kINFO) << "Failed!";
     return false;
   }
   Message m;
-  m.type = MessageType::TEST_CONTROLLER;
+  m.type = MessageType::kTEST_CONTROLLER;
   if (!connection->Write(m)) {
-    std::cout << "Failed!" << std::endl;
+    LOG(kINFO) << "Failed!";
     return false;
   }
   return true;
 }
+} // namespace
 
 int main(int argc, const char **argv) {
-  std::cout << "Got " << argc << " arguments:" << std::endl;
+
+  LOG(kINFO) << "Got " << argc << " arguments:";
   for (int i = 0; i < argc; ++i) {
-    std::cout << '\t' << argv[i] << std::endl;
+    LOG(kINFO) << '\t' << argv[i];
   }
-  std::cout << '\n';
-  srand(time(nullptr));
+  LOG(kINFO) << '\n';
+  std::random_device rd;
+  std::mt19937 rng(rd());
+  std::uniform_int_distribution<int> uni(1, 9999);
+  uni(rng);
 
   // Abstract factory was used. To make program use another ipc method it's
   // needed to implement new group of classes and pass new factory to the
@@ -56,10 +62,10 @@ int main(int argc, const char **argv) {
 
   for (int i = 0; i < argc; ++i) {
     if (strcmp(argv[i], "-C") == 0) {
-      std::cout << "Attempt to run controller..." << std::endl;
+      LOG(kINFO) << "Attempt to run controller...";
       Controller controller(factory);
       controller.Run();
-      std::cout << "END" << std::endl;
+      LOG(kINFO) << "END";
       char c;
       std::cin >> c;
       return 0;
@@ -71,7 +77,7 @@ int main(int argc, const char **argv) {
     // sleep for giving the controller time to initialize
     Sleep(200);
   }
-  std::cout << "Attempt to run node..." << std::endl;
+  LOG(kINFO) << "Attempt to run node...";
   Node node(factory);
   node.Run();
 
